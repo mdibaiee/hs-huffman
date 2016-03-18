@@ -36,8 +36,8 @@ module Huffman ( tree, charSequence, decode )
     charSequence node ch =
       fromJust $ helper node ch ""
       where
-        helper (Node { symbol = s, left = l, right = r }) ch sequ
-          | (isJust s) && (fromJust s == ch) = Just sequ
+        helper Node { symbol = s, left = l, right = r } ch sequ
+          | s == Just ch = Just sequ
           | isNothing l && isNothing r       = Nothing
           | otherwise                        = let leftPath = helper (fromJust l) ch (sequ ++ "0")
                                                    rightPath = helper (fromJust r) ch (sequ ++ "1")
@@ -45,8 +45,8 @@ module Huffman ( tree, charSequence, decode )
 
     -- Root-to-leaf search, find a character based on sequence string
     findChar :: Node -> String -> Maybe Char
-    findChar n@(Node { symbol = s, left = l, right = r}) sequ
-      | length sequ > 0 = let path = if head sequ == '0' then l else r
+    findChar n@Node { symbol = s, left = l, right = r} sequ
+      | not $ null sequ = let path = if head sequ == '0' then l else r
                           in if isJust path then
                               findChar (fromJust path) (tail sequ)
                              else
@@ -59,7 +59,7 @@ module Huffman ( tree, charSequence, decode )
     encode :: String -> String
     encode input = let t = tree input
                        table = charTable t input
-                   in concat $ map (\a -> fromJust $ Map.lookup a table) input
+                   in concatMap (\a -> fromJust $ Map.lookup a table) input
 
     -- Character table, a Map representing each character's bit sequence
     charTable :: Node -> String -> Map.Map Char String
@@ -72,10 +72,10 @@ module Huffman ( tree, charSequence, decode )
     -- Decode a string, given the tree representing it
     decode :: Node -> String -> String
     decode t input = let (valid, next) = span (isNothing . findChar t) $ inits input
-                         sequ = (head next)
-                         ninput = (tails input) !! (length valid)
+                         sequ = head next
+                         ninput = tails input !! length valid
                          ch = fromJust $ findChar t sequ
-                     in if length ninput > 0 then
-                          ch:(decode t ninput)
+                     in if not $ null ninput then
+                          ch : decode t ninput
                         else
                           [ch]
